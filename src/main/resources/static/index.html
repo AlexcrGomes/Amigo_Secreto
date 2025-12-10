@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Amigo Secreto - Eventos</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .evento { border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; }
+        .link { color: blue; text-decoration: underline; cursor: pointer; }
+        form { margin-top: 20px; }
+        label { display: block; margin-top: 10px; }
+        input[type="text"] { width: 300px; padding: 5px; }
+        button { margin-top: 10px; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+<h1>Eventos de Amigo Secreto</h1>
+
+<div id="lista-eventos"></div>
+
+<h2>Criar novo evento</h2>
+<form id="form-criar-evento">
+    <label>Nome do evento:
+        <input type="text" id="nome-evento" required>
+    </label>
+    <button type="submit">Criar</button>
+</form>
+
+<script>
+    const apiBase = '/api';
+
+    async function carregarEventos() {
+      const resp = await fetch(apiBase + '/eventos');
+      const eventos = await resp.json();
+
+      const lista = document.getElementById('lista-eventos');
+      lista.innerHTML = '';
+
+      eventos.forEach(e => {
+        const div = document.createElement('div');
+        div.className = 'evento';
+        div.innerHTML = `
+          <strong>${e.nome}</strong> (status: ${e.status})<br>
+          <span class="link" onclick="abrirEvento(${e.id})">Abrir evento</span>
+        `;
+        lista.appendChild(div);
+      });
+    }
+
+    function abrirEvento(id) {
+      window.location.href = 'evento.html?id=' + id;
+    }
+
+    // Criar evento
+    document.getElementById('form-criar-evento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('nome-evento').value;
+
+      const resp = await fetch(apiBase + '/eventos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome })
+      });
+
+      if (resp.ok) {
+        alert('Evento criado com sucesso!');
+        document.getElementById('nome-evento').value = '';
+        carregarEventos();
+      } else {
+        alert('Erro ao criar evento');
+      }
+    });
+
+    carregarEventos();
+</script>
+</body>
+</html>
