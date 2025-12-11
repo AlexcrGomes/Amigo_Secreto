@@ -3,6 +3,9 @@ package com.amigosecreto.amigo_secreto.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 public class Participante {
 
@@ -14,10 +17,13 @@ public class Participante {
 
     private String cpf;
 
-    @ManyToOne
-    @JoinColumn(name = "evento_id")
-    @JsonIgnore
-    private Evento evento;
+    @ManyToMany
+    @JoinTable(
+            name = "participante_evento",
+            joinColumns = @JoinColumn(name = "participante_id"),
+            inverseJoinColumns = @JoinColumn(name = "evento_id")
+    )
+    private Set<Evento> eventos = new HashSet<>();
 
 
     public Long getId() { return id; }
@@ -32,7 +38,7 @@ public class Participante {
 
     public void setCpf(String cpf) { this.cpf = cpf; }
 
-    public Evento getEvento() { return evento; }
+    public Set<Evento> getEvento() { return eventos; }
 
-    public void setEvento(Evento evento) { this.evento = evento; }
+    public void setEventos(Set<Evento> eventos) { this.eventos = eventos; }
 }
