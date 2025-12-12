@@ -1,5 +1,6 @@
 package com.amigosecreto.amigo_secreto.repository;
 
+import com.amigosecreto.amigo_secreto.model.Participante;
 import com.amigosecreto.amigo_secreto.model.Sorteio;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,5 @@ public interface SorteioRepository extends JpaRepository<Sorteio, Long> {
     List<Sorteio> findByEventoId(Long eventoId);
 
     Optional<Sorteio> findByEventoIdAndDoadorId(Long eventoId, Long doadorId);
+
 }

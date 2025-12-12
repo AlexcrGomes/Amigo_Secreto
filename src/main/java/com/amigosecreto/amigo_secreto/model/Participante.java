@@ -25,6 +25,8 @@ public class Participante {
     )
     private Set<Evento> eventos = new HashSet<>();
 
+    public Participante() {
+    }
 
     public Long getId() { return id; }
 
@@ -38,7 +40,7 @@ public class Participante {
 
     public void setCpf(String cpf) { this.cpf = cpf; }
 
-    public Set<Evento> getEvento() { return eventos; }
+    public Set<Evento> getEventos() { return eventos; }
 
     public void setEventos(Set<Evento> eventos) { this.eventos = eventos; }
 }

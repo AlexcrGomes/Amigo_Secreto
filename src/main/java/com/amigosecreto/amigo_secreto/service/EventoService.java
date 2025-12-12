@@ -11,6 +11,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EventoService {
@@ -53,7 +54,26 @@ public class EventoService {
 
     // Participantes
     @Transactional
-    public Participante adicionarParticipante(Long eventoId, String nome, String cpf) {
+    public Boolean existeCpfCadastrado(String cpf) {
+        return participanteRepository.existsByCpf(cpf);
+    }
+
+    @Transactional
+    public Participante criarParticipante(String nome, String cpf) {
+
+        if (existeCpfCadastrado(cpf)) {
+            throw new RuntimeException("Participante já existe");
+        }
+
+        Participante p = new Participante();
+        p.setNome(nome);
+        p.setCpf(cpf);
+
+        return participanteRepository.save(p);
+    }
+
+    @Transactional
+    public Participante adicionarParticipanteAoEvento(Long eventoId, String nome, String cpf) {
         Evento evento = buscarEvento(eventoId);
 
         if (evento.getStatus() != EventStatus.ABERTO) {
@@ -63,15 +83,46 @@ public class EventoService {
         Participante p = new Participante();
         p.setNome(nome);
         p.setCpf(cpf);
-        p.setEvento(evento);
+        p.getEventos().add(evento);
         return participanteRepository.save(p);
     }
 
     public List<Participante> listarParticipantes(Long eventoId) {
-        return participanteRepository.findByEventoId(eventoId);
+        return participanteRepository.findByEventosId(eventoId);
     }
 
-    // Sorteio individual, mas sorteando o evento t odo se ainda não existir
+    //Verificar se existe sorteio para participante no evento
+    @Transactional
+    public Boolean existeSorteioParaParticipante(Long eventoId, Long participanteId) {
+        Optional<Sorteio> existente =
+                sorteioRepository.findByEventoIdAndDoadorId(eventoId, participanteId);
+        return existente.isPresent();
+    }
+
+    //Lista de participantes não sorteados
+    @Transactional
+    public List<Participante> participantesNaoSorteados(Long eventoId) {
+        // Obtem todos os participantes do evento
+        List<Participante> participantesDoEvento = eventoRepository.findByParticipantessId(eventoId);
+
+        // Obtem todos os sorteios do evento
+        List<Sorteio> sorteiosDoEvento = sorteioRepository.findByEventoId(eventoId);
+
+        // Cria um Set de IDs de participantes que já foram sorteados
+        Set<Long> participantesSorteados = sorteiosDoEvento.stream()
+                .map(sorteio -> sorteio.getDoador().getId())  // Assuming "doador" is the participant who did the draw
+                .collect(Collectors.toSet());
+
+        // Filtra a lista de participantes para incluir apenas os que não foram sorteados
+        List<Participante> participantesNaoSorteados = participantesDoEvento.stream()
+                .filter(participante -> !participantesSorteados.contains(participante.getId()))
+                .collect(Collectors.toList());
+
+        // Retorna a lista de participantes não sorteados
+        return participantesNaoSorteados;
+    }
+
+    // Sorteio individual
     @Transactional
     public Sorteio sortearParaParticipante(Long eventoId, Long participanteId) {
         Evento evento = buscarEvento(eventoId);
@@ -80,14 +131,11 @@ public class EventoService {
             throw new RuntimeException("Evento precisa estar FECHADO para realizar o sorteio");
         }
 
-        // Verifica se já existe sorteio para o participante
-        Optional<Sorteio> existente =
-                sorteioRepository.findByEventoIdAndDoadorId(eventoId, participanteId);
-        if (existente.isPresent()) {
-            return existente.get();
+        if (existeSorteioParaParticipante(Long eventoId, Long participanteId) {
+            throw new RuntimeException("Participante já realizou o sorteio");
         }
 
-        // Se NÃO existe sorteio para o evento ainda, cria um para todos
+        // Se NÃO existe sorteio para o evento ainda, cria um sorteio para o participante
         List<Sorteio> sorteiosEvento = sorteioRepository.findByEventoId(eventoId);
         if (sorteiosEvento.isEmpty()) {
             gerarSorteioCompleto(eventoId);
@@ -97,6 +145,8 @@ public class EventoService {
         return sorteioRepository.findByEventoIdAndDoadorId(eventoId, participanteId)
                 .orElseThrow(() -> new RuntimeException("Participante não encontrado no evento ou erro no sorteio"));
     }
+
+
 
     // Algoritmo do sorteio: cria um embaralhamento em que ninguém tira a si mesmo
     private void gerarSorteioCompleto(Long eventoId) {
