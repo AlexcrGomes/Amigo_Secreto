@@ -11,7 +11,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class EventoService {
@@ -27,7 +26,6 @@ public class EventoService {
         this.sorteioRepository = sorteioRepository;
     }
 
-    // Eventos
     public List<Evento> listarEventos() {
         return eventoRepository.findAll();
     }
@@ -35,6 +33,10 @@ public class EventoService {
     public Evento buscarEvento(Long id) {
         return eventoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado"));
+    }
+
+    public List<Participante> listarParticipantes(Long eventoId) {
+        return eventoRepository.findByParticipantesId(eventoId);
     }
 
     @Transactional
@@ -52,7 +54,43 @@ public class EventoService {
         return eventoRepository.save(e);
     }
 
-    // Participantes
+    private void sortearEvento(Long eventoId) {
+        Evento evento = buscarEvento(eventoId);
+
+        List<Participante> participantes = eventoRepository.findByParticipantesId(eventoId);
+
+        if (participantes.size() < 2) {
+            throw new RuntimeException("É necessário pelo menos 2 participantes para o sorteio");
+        }
+
+        List<Participante> recebedores = new ArrayList<>(participantes);
+
+        Random random = new Random();
+        boolean valido = false;
+
+        while (!valido) {
+            Collections.shuffle(recebedores, random);
+            valido = true;
+            for (int i = 0; i < participantes.size(); i++) {
+                if (participantes.get(i).getId().equals(recebedores.get(i).getId())) {
+                    valido = false;
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < participantes.size(); i++) {
+            Participante doador = participantes.get(i);
+            Participante recebedor = recebedores.get(i);
+
+            Sorteio s = new Sorteio();
+            s.setEvento(evento);
+            s.setDoador(doador);
+            s.setRecebedor(recebedor);
+            sorteioRepository.save(s);
+        }
+    }
+
     @Transactional
     public Boolean existeCpfCadastrado(String cpf) {
         return participanteRepository.existsByCpf(cpf);
@@ -89,100 +127,6 @@ public class EventoService {
 
     public List<Participante> listarParticipantes(Long eventoId) {
         return participanteRepository.findByEventosId(eventoId);
-    }
-
-    //Verificar se existe sorteio para participante no evento
-    @Transactional
-    public Boolean existeSorteioParaParticipante(Long eventoId, Long participanteId) {
-        Optional<Sorteio> existente =
-                sorteioRepository.findByEventoIdAndDoadorId(eventoId, participanteId);
-        return existente.isPresent();
-    }
-
-    //Lista de participantes não sorteados
-    @Transactional
-    public List<Participante> participantesNaoSorteados(Long eventoId) {
-        // Obtem todos os participantes do evento
-        List<Participante> participantesDoEvento = eventoRepository.findByParticipantessId(eventoId);
-
-        // Obtem todos os sorteios do evento
-        List<Sorteio> sorteiosDoEvento = sorteioRepository.findByEventoId(eventoId);
-
-        // Cria um Set de IDs de participantes que já foram sorteados
-        Set<Long> participantesSorteados = sorteiosDoEvento.stream()
-                .map(sorteio -> sorteio.getDoador().getId())  // Assuming "doador" is the participant who did the draw
-                .collect(Collectors.toSet());
-
-        // Filtra a lista de participantes para incluir apenas os que não foram sorteados
-        List<Participante> participantesNaoSorteados = participantesDoEvento.stream()
-                .filter(participante -> !participantesSorteados.contains(participante.getId()))
-                .collect(Collectors.toList());
-
-        // Retorna a lista de participantes não sorteados
-        return participantesNaoSorteados;
-    }
-
-    // Sorteio individual
-    @Transactional
-    public Sorteio sortearParaParticipante(Long eventoId, Long participanteId) {
-        Evento evento = buscarEvento(eventoId);
-
-        if (evento.getStatus() != EventStatus.FECHADO) {
-            throw new RuntimeException("Evento precisa estar FECHADO para realizar o sorteio");
-        }
-
-        if (existeSorteioParaParticipante(Long eventoId, Long participanteId) {
-            throw new RuntimeException("Participante já realizou o sorteio");
-        }
-
-        // Se NÃO existe sorteio para o evento ainda, cria um sorteio para o participante
-        List<Sorteio> sorteiosEvento = sorteioRepository.findByEventoId(eventoId);
-        if (sorteiosEvento.isEmpty()) {
-            gerarSorteioCompleto(eventoId);
-        }
-
-        // Agora deve existir
-        return sorteioRepository.findByEventoIdAndDoadorId(eventoId, participanteId)
-                .orElseThrow(() -> new RuntimeException("Participante não encontrado no evento ou erro no sorteio"));
-    }
 
 
-
-    // Algoritmo do sorteio: cria um embaralhamento em que ninguém tira a si mesmo
-    private void gerarSorteioCompleto(Long eventoId) {
-        List<Participante> participantes = participanteRepository.findByEventoId(eventoId);
-
-        if (participantes.size() < 2) {
-            throw new RuntimeException("É necessário pelo menos 2 participantes para o sorteio");
-        }
-
-        List<Participante> destino = new ArrayList<>(participantes);
-
-        Random random = new Random();
-        boolean valido = false;
-
-        // Reembaralha enquanto alguém tirou a si mesmo
-        while (!valido) {
-            Collections.shuffle(destino, random);
-            valido = true;
-            for (int i = 0; i < participantes.size(); i++) {
-                if (participantes.get(i).getId().equals(destino.get(i).getId())) {
-                    valido = false;
-                    break;
-                }
-            }
-        }
-
-        // Salva os sorteios no banco
-        for (int i = 0; i < participantes.size(); i++) {
-            Participante doador = participantes.get(i);
-            Participante recebedor = destino.get(i);
-
-            Sorteio s = new Sorteio();
-            s.setEvento(doador.getEvento());
-            s.setDoador(doador);
-            s.setRecebedor(recebedor);
-            sorteioRepository.save(s);
-        }
-    }
 }

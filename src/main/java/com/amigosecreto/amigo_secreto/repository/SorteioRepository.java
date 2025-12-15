@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface SorteioRepository extends JpaRepository<Sorteio, Long> {
 
-    List<Sorteio> findByEventoId(Long eventoId);
+    List<Sorteio> findByParticipanteId(Long eventoId);
 
     Optional<Sorteio> findByEventoIdAndDoadorId(Long eventoId, Long doadorId);
 

@@ -21,7 +21,7 @@ public class SorteioController {
     public ResultadoSorteioResponse sortear(@PathVariable Long eventoId,
                                             @PathVariable Long participanteId) {
 
-        Sorteio sorteio = eventoService.sortearParaParticipante(eventoId, participanteId);
+        Sorteio sorteio = eventoService.sortearEvento(eventoId);
 
         return new ResultadoSorteioResponse(
                 sorteio.getDoador().getId(),
