@@ -1,5 +1,6 @@
 package com.amigosecreto.amigo_secreto.controller;
 
+import com.amigosecreto.amigo_secreto.model.Evento;
 import com.amigosecreto.amigo_secreto.model.Sorteio;
 import com.amigosecreto.amigo_secreto.service.EventoService;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/eventos/{eventoId}/sorteio")
+@RequestMapping("/api/eventos/{eventoId}")
 public class SorteioController {
 
     private final EventoService eventoService;
@@ -17,11 +18,11 @@ public class SorteioController {
         this.eventoService = eventoService;
     }
 
-    @PostMapping("/{participanteId}")
-    public ResultadoSorteioResponse sortear(@PathVariable Long eventoId,
-                                            @PathVariable Long participanteId) {
+    @PostMapping("/sortear")
+    public ResultadoSorteioResponse sortear(@PathVariable Long eventoId) {
+        Evento evento = eventoService.buscarEvento(eventoId);
 
-        Sorteio sorteio = eventoService.sortearEvento(eventoId);
+        Sorteio sorteio = eventoService.sortearEvento(evento.getId());
 
         return new ResultadoSorteioResponse(
                 sorteio.getDoador().getId(),

@@ -8,7 +8,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/eventos")
-@CrossOrigin // se quiser chamar de outro domínio
+@CrossOrigin(
+        origins = "http://localhost:3000",
+        methods = { RequestMethod.GET, RequestMethod.POST }
+)
 public class EventoController {
 
     private final EventoService eventoService;
@@ -17,7 +20,7 @@ public class EventoController {
         this.eventoService = eventoService;
     }
 
-    @GetMapping
+    @GetMapping("/lista")
     public List<Evento> listar() {
         return eventoService.listarEventos();
     }
@@ -35,5 +38,10 @@ public class EventoController {
     @PostMapping("/{id}/fechar")
     public Evento fechar(@PathVariable Long id) {
         return eventoService.fecharEvento(id);
+    }
+
+    @PostMapping("/{id}/sortear")
+    public Evento sortear(@PathVariable Long id) {
+        return eventoService.sortearEvento(id);
     }
 }

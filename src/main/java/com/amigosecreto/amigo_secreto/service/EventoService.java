@@ -35,10 +35,6 @@ public class EventoService {
                 .orElseThrow(() -> new RuntimeException("Evento não encontrado"));
     }
 
-    public List<Participante> listarParticipantes(Long eventoId) {
-        return eventoRepository.findByParticipantesId(eventoId);
-    }
-
     @Transactional
     public Evento criarEvento(String nome) {
         Evento e = new Evento();
@@ -54,10 +50,11 @@ public class EventoService {
         return eventoRepository.save(e);
     }
 
-    private void sortearEvento(Long eventoId) {
+    @Transactional
+    public Evento sortearEvento(Long eventoId) {
         Evento evento = buscarEvento(eventoId);
 
-        List<Participante> participantes = eventoRepository.findByParticipantesId(eventoId);
+        List<Participante> participantes = participanteRepository.findByParticipantesId(eventoId);
 
         if (participantes.size() < 2) {
             throw new RuntimeException("É necessário pelo menos 2 participantes para o sorteio");
@@ -100,33 +97,43 @@ public class EventoService {
     public Participante criarParticipante(String nome, String cpf) {
 
         if (existeCpfCadastrado(cpf)) {
-            throw new RuntimeException("Participante já existe");
+            throw new RuntimeException("CPF já cadastrado");
         }
 
         Participante p = new Participante();
         p.setNome(nome);
         p.setCpf(cpf);
-
         return participanteRepository.save(p);
     }
 
     @Transactional
-    public Participante adicionarParticipanteAoEvento(Long eventoId, String nome, String cpf) {
+    public Participante adicionarParticipanteAoEvento(Long eventoId, String cpf) {
         Evento evento = buscarEvento(eventoId);
 
-        if (evento.getStatus() != EventStatus.ABERTO) {
-            throw new RuntimeException("Evento já está fechado para novos participantes");
-        }
+        if (existeCpfCadastrado(cpf)) {
 
-        Participante p = new Participante();
-        p.setNome(nome);
-        p.setCpf(cpf);
-        p.getEventos().add(evento);
-        return participanteRepository.save(p);
+            if (evento.getStatus() != EventStatus.ABERTO) {
+                throw new RuntimeException("Evento não esta aberto para novos participantes");
+            }
+
+            Participante p = new Participante();
+            p.setCpf(cpf);
+            p.getEventos().add(evento);
+            return participanteRepository.save(p);
+        }
+        throw new RuntimeException("Participante não existe");
+
     }
 
+    @Transactional
     public List<Participante> listarParticipantes(Long eventoId) {
-        return participanteRepository.findByEventosId(eventoId);
+        Evento evento = buscarEvento(eventoId);
+
+        if (evento.getParticipantes().isEmpty()) {
+            throw new RuntimeException("Evento não possue participantes");
+        }
+        return evento.getParticipantes();
+    }
 
 
 }

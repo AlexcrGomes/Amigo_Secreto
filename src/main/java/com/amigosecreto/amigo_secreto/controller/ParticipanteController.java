@@ -24,7 +24,6 @@ public class ParticipanteController {
     @PostMapping
     public Participante adicionar(@PathVariable Long eventoId,
                                   @RequestBody CriarParticipanteRequest request) {
-        return eventoService.adicionarParticipante(eventoId,
-                request.getNome(), request.getCpf());
+        return eventoService.adicionarParticipanteAoEvento(eventoId, request.getCpf());
     }
 }
